@@ -1,36 +1,51 @@
 const WebSocket = require("ws");
 const express = require("express");
-const app = express()
-const path = require("path")
+const app = express();
+const path = require("path");
+const dotenv = require("dotenv");
 
-app.use("/",express.static(path.resolve(__dirname, "../client")))
+dotenv.config();
 
-const myServer = app.listen(9876)  //regular http server using node express which serves your webpage
+app.use("/", express.static(path.resolve(__dirname, "../client")));
+
+const PORT = process.env.PORT || 3000;
+
+// Regular HTTP server using Node Express which serves your webpage
+const myServer = app.listen(PORT, () => {
+  console.log(`Server running on PORT:${PORT}`);
+});
 
 const wsServer = new WebSocket.Server({
-    noServer: true
-})                                      // a websocket server
+  noServer: true,
+}); // A WebSocket server
 
-wsServer.on("connection", function(ws) {    // what should a websocket do on connection
-    ws.on("message", function(msg) {        // what to do on message event
-        wsServer.clients.forEach(function each(client) {
-            if (client.readyState === WebSocket.OPEN) {     // check if client is ready
-              client.send(msg.toString());
-            }
-        })
-    })
-})
-
-myServer.on('upgrade', async function upgrade(request, socket, head) {      //handling upgrade(http to websocekt) event
-
-    // accepts half requests and rejects half. Reload browser page in case of rejection
-    
-    if(Math.random() > 0.5){
-        return socket.end("HTTP/1.1 401 Unauthorized\r\n", "ascii")     //proper connection close in case of rejection
-    }
-    
-    //emit connection when request accepted
-    wsServer.handleUpgrade(request, socket, head, function done(ws) {
-      wsServer.emit('connection', ws, request);
+wsServer.on("connection", function (ws) {
+  ws.on("message", function (msg) {
+    wsServer.clients.forEach(function each(client) {
+      if (client.readyState === WebSocket.OPEN) {
+        // Check if client is ready
+        client.send(msg.toString()); // Broadcast the message to all clients
+      }
     });
+  });
+
+  ws.on("close", function () {
+    console.log("WebSocket connection closed from server.");
+  });
+
+  ws.on("error", function (error) {
+    console.error("WebSocket error from server:", error);
+  });
+});
+
+myServer.on("upgrade", function upgrade(request, socket, head) {
+  // Accepts half requests and rejects half. Reload browser page in case of rejection
+  if (Math.random() > 0.5) {
+    return socket.end("HTTP/1.1 401 Unauthorized\r\n", "ascii"); // Proper connection close in case of rejection
+  }
+
+  // Emit connection when request accepted
+  wsServer.handleUpgrade(request, socket, head, function done(ws) {
+    wsServer.emit("connection", ws, request);
+  });
 });
