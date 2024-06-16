@@ -7,7 +7,6 @@ const myMessages = document.getElementById("messages")
 const myInput = document.getElementById("message")
 const sendBtn = document.getElementById("send")
 
-sendBtn.disabled = true
 sendBtn.addEventListener("click", sendMsg, false)
 
 //Sending message from client
